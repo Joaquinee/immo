@@ -1,30 +1,26 @@
 
 import { NextFunction, Request, Response } from "express";
 import { Auth } from "../models/auth.model"
-import MongoDB from "../models/db.model";
-import bcrypt from 'bcrypt';
 import { comparePassword, hashPassword } from "../utils/hash";
-import { eq } from "cheerio/lib/api/traversing";
 import { generateToken } from "../utils/token";
-import c from "config";
-import { logger } from "../utils/logger";
 
 
-/*
-* @params {Request} req
-* @params {Response} res
-* @params {NextFunction} next
-* @returns {Promise<void>}
-* @throws {Error}
-* @description Création d'un utilisateur
-*/
+/**
+ * Register a new user.
+ * @route POST /api/auth/register
+ * @group Auth - Operations about authentication
+ * @param {string} email.body.required - email of the user
+ * @param {string} password.body.required - password of the user
+ * @returns {object} 200 - A successful response
+ * @returns {Error}  default - Unexpected error
+ */
 exports.Authregister = async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (typeof req.body !== 'object' || req.body === null) {
-            return next(new Error('Le corps de la requête est vide ou invalide'));
+            return res.status(400).json({ error: 'Le corps de la requête est vide ou invalide'});
         }
         if (typeof req.body.email !== 'string' || typeof req.body.password !== 'string') {
-            return res.status(400).json({ message: 'Les champs email et password sont requis' });
+            return res.status(400).json({ error: 'Les champs doivent être des chaines de caractères'});
         }
 
         const hashedPassword = await hashPassword(req.body.password);
@@ -38,23 +34,23 @@ exports.Authregister = async (req: Request, res: Response, next: NextFunction) =
         }
         const result = await clt.insertOne(userData);
         if (result) {
-            logger.info(`Nouveau compte : ${userData.email}`)
             return res.status(200).json({ message: 'Compte crée' });
         } else {
-            return res.status(500).json({ message: 'Erreur lors de la création du compte' });
+            return res.status(500).json({ error: 'Erreur lors de la création du compte'});
         }
     } catch (error) {
         next(error);      
     }
 }
-/*
-* @params {Request} req
-* @params {Response} res
-* @params {NextFunction} next
-* @returns {Promise<void>}
-* @throws {Error}
-* @description Authentification d'un utilisateur
-*/
+/**
+ * Login a user.
+ * @route POST /api/auth/login
+ * @group Auth - Operations about authentication
+ * @param {string} email.body.required - email of the user
+ * @param {string} password.body.required - password of the user
+ * @returns {object} 200 - A successful response
+ * @returns {Error}  default - Unexpected error
+ */
 exports.Authlogin = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const clt = await Auth.getCollection();
@@ -63,11 +59,11 @@ exports.Authlogin = async (req: Request, res: Response, next: NextFunction) => {
             email: data.email
         }).then(async (user) => {
             if (!user) {
-                return res.status(401).json({ message: 'Utilisateur non trouvé' });
+                return res.status(400).json({ error: 'Utilisateur non trouvé' });
             }
             let equals = await comparePassword(data.password, user.password);
             if(!equals){
-                return res.status(401).json({ message: 'Mot de passe incorrect' });
+                return res.status(400).json({ error: 'Mot de passe incorrect' });
             }
             const token = generateToken(user._id.toString());
             return res.status(200).json({
