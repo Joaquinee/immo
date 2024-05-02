@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import { Book } from "../models/book.model";
 import { ObjectId } from "mongodb";
 import fs from "fs";
-import { error } from "console";
 
 /**
  * Create a new book
@@ -22,19 +21,28 @@ import { error } from "console";
  */
 exports.createBook = async (req: Request, res:  Response, next: NextFunction): Promise<any> => {
    const bookObject = JSON.parse(req.body.book);
+
    if (!req.file) {
        return res.status(400).json({error: 'Veuillez ajouter une image'});
     }
-    if (typeof bookObject.year !== 'string' || typeof bookObject.title !== 'string' || typeof bookObject.author !== 'string' || typeof bookObject.genre !== 'string') {
-        return res.status(400).json({error: 'Les champs doivent être des chaines de caractères et son olbigatoire'});
-    }
-
 
    const book = new Book({
       ...bookObject,
-      imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
+      imageUrl: `${req.protocol}://${req.get('host')}/images/rezized-${req.file.filename}`,
    
     });
+    
+    let verif = await Book.validateBook(book);
+    if (verif.length > 0) {
+        fs.unlink(`src/images/rezized-${req.file.filename}`, (err) => {
+            if (err) {
+                return res.status(500).json({ error: 'Erreur lors de la suppression de l\'image' });
+            }
+        });
+        return res.status(400).json({error: verif[0]});
+    }
+
+
     const clt = await Book.getCollection();
     const exist = await clt.findOne({ title: book.title, author: book.author });
 
@@ -47,6 +55,7 @@ exports.createBook = async (req: Request, res:  Response, next: NextFunction): P
     } else {
         return res.status(500).json({error: 'Erreur lors de la création du livre'});
     }
+    
    
 }
 /**
@@ -59,7 +68,7 @@ exports.createBook = async (req: Request, res:  Response, next: NextFunction): P
  * @group Books - Operations about books
  * @returns {object} 200 - A successful response
  * @returns {Error}  default - Unexpected error
- */
+ */ 
 exports.getAllBooks = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
    try {
        const clt = await Book.getCollection();
@@ -173,29 +182,43 @@ exports.deleteBook = async (req: Request, res: Response, next: NextFunction): Pr
  * @returns {object} 200 - A successful response
  * @returns {Error}  default - Unexpected error
  */
-exports.updateBook = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+export const updateBook = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
-        let imageUrl = req.body.imageUrl;
         const bookObject = req.body;
-
-        if (typeof bookObject.year !== 'string' || typeof bookObject.title !== 'string' || typeof bookObject.author !== 'string' || typeof bookObject.genre !== 'string') {
-            return res.status(400).json({error: 'Les champs doivent être des chaines de caractères et son olbigatoire'});
-        }
-
-
+        const lastImage = await Book.getImageUrl(req.params.bookId);
+        let newImage;
         let book;
         if (req.file) {
-            imageUrl = `${req.protocol}://${req.get('host')}/images/${req.file.filename}`;
-            book = new Book({ 
-                ...bookObject,
-                imageUrl: imageUrl,
+            newImage = `${req.protocol}://${req.get('host')}/images/rezized-${req.file.filename}`;
+            book = new Book({
+                ...JSON.parse(bookObject.book),
+                imageUrl: newImage,
             });
-            
+
+            const deleteImage = lastImage.split('/images/')[1];
+            fs.unlink(`src/images/${deleteImage}`, (err) => {
+                if (err) {
+                    console.error("Erreur lors de la suppression de l'image :", err);
+                }
+            });
         } else {
             book = new Book({
-                ...bookObject
+                ...bookObject,
+                imageUrl: lastImage,
             });
         }
+        const errors = await Book.validateBook(book);
+        if (errors.length > 0) {
+            if (req.file) {
+                fs.unlink(`src/images/rezized-${req.file.filename}`, (err) => {
+                    if (err) {
+                        console.error("Erreur lors de la suppression de l'image :", err);
+                    }
+                });
+            }
+            return res.status(400).json({ error: errors[0] });
+        }
+
         const clt = await Book.getCollection();
         const result = await clt.updateOne({ _id: new ObjectId(req.params.bookId) }, { $set: book });
         if (result) {
@@ -203,7 +226,7 @@ exports.updateBook = async (req: Request, res: Response, next: NextFunction): Pr
         } else {
             return res.status(500).json({ error: 'Erreur lors de la modification du livre' });
         }
-        
+
     } catch (error) {
         next(error);
     }

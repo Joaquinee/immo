@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { MiddleWareAuth } from "../middleware/Auth";
-import { multerMiddleware } from "../middleware/Multer.middleware";
+import { MiddleWareAuth } from "../middleware/auth.middleware";
 const bookRouter = Router();
 const bookController = require("../controllers/book.controller");
+const upload = require('../middleware/Multer.middleware');
 
 /**
 * Retrieve all Books.
@@ -19,7 +19,7 @@ bookRouter.get("/bestrating", bookController.getBestRating);
  * Create a new Book.
  * @route POST /api/books
  */
-bookRouter.post("/", MiddleWareAuth, multerMiddleware ,bookController.createBook);
+bookRouter.post("/", MiddleWareAuth, upload.multerMiddleware,  upload.rezizeImage ,bookController.createBook);
 /**
 * Retrieve a single Book with bookId.
 * @route GET /api/books/:bookId
@@ -31,7 +31,7 @@ bookRouter.get("/:bookId", bookController.getOneBook);
 * @route PUT /api/books/:bookId
 * @param bookId - The ID of the book to update.
 */
-bookRouter.put("/:bookId", MiddleWareAuth, multerMiddleware ,bookController.updateBook);
+bookRouter.put("/:bookId", MiddleWareAuth, upload.multerMiddleware , upload.rezizeImage, bookController.updateBook);
 /**
 * Delete a Book with bookId.
 * @route DELETE /api/books/:bookId

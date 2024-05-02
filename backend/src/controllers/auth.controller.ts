@@ -14,6 +14,7 @@ import { generateToken } from "../utils/token";
  * @returns {object} 200 - A successful response
  * @returns {Error}  default - Unexpected error
  */
+
 exports.Authregister = async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (typeof req.body !== 'object' || req.body === null) {
@@ -30,7 +31,7 @@ exports.Authregister = async (req: Request, res: Response, next: NextFunction) =
             email: userData.email
         });
         if (exist) {
-            return res.status(400).json({ message: 'Cet email est déjà utilisé' });
+            return res.status(400).json({ message: 'Ce compte existe deja' });
         }
         const result = await clt.insertOne(userData);
         if (result) {
@@ -63,7 +64,7 @@ exports.Authlogin = async (req: Request, res: Response, next: NextFunction) => {
             }
             let equals = await comparePassword(data.password, user.password);
             if(!equals){
-                return res.status(400).json({ error: 'Mot de passe incorrect' });
+                return res.status(400).json({ error: 'Les informations saisie sont incorrect' });
             }
             const token = generateToken(user._id.toString());
             return res.status(200).json({

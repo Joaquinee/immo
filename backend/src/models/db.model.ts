@@ -2,6 +2,8 @@ import { MongoClient, Db } from 'mongodb';
 import Cfg from '../config/db.json'
 import { Book } from './book.model';
 import { Auth } from './auth.model';
+import chalk from 'chalk';
+
 
 class MongoDB {
     private static client: MongoClient;
@@ -15,15 +17,17 @@ class MongoDB {
             MongoDB.client = new MongoClient(uri);
             await MongoDB.client.connect();
             MongoDB.db = MongoDB.client.db(Cfg.nameDatabase);
-            console.log('Connexion à MongoDB réussie');
+
+
+            console.log(chalk.green('[OK] Connexion à MongoDB réussie'));
         } catch (error) {
-            console.error('Erreur de connexion à MongoDB :', error);
+            console.error(chalk.red('[ERROR] Connexion à MongoDB échouée'));
             throw error;
         }
     }
     static disconnect(): void {
         MongoDB.client.close();
-        console.log('Déconnexion de MongoDB réussie');
+        console.log(chalk.green('[OK] Déconnexion de MongoDB réussie'));
     }
     static getDatabase(): Db {
         return MongoDB.db;
