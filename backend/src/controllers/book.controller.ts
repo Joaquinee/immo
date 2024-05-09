@@ -32,7 +32,7 @@ exports.createBook = async (req: Request, res:  Response, next: NextFunction): P
    
     });
     
-    let verif = await Book.validateBook(book);
+    const verif = await Book.validateBook(book);
     if (verif.length > 0) {
         fs.unlink(`src/images/rezized-${req.file.filename}`, (err) => {
             if (err) {
