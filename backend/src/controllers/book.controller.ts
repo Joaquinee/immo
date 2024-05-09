@@ -44,10 +44,24 @@ exports.createBook = async (req: Request, res:  Response, next: NextFunction): P
 
 
     const clt = await Book.getCollection();
-    const exist = await clt.findOne({ title: book.title, author: book.author });
-
+    const exist = await clt.findOne({ 
+        $or: [
+            { title: book.title }
+        ],
+        author: { $regex: book.author, $options: 'i' }
+    });
     if (exist) {
+
+        console.log('exist', exist);
+        fs.unlink(`src/images/rezized-${req.file.filename}`, (err) => {
+            if (err) {
+                return res.status(500).json({ error: 'Erreur lors de la suppression de l\'image' });
+            }
+        });
         return res.status(400).json({error: 'Ce livre et deja publier'});
+
+       
+       
     }
     const result = await clt.insertOne(book);
     if (result) {

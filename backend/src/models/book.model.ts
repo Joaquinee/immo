@@ -22,12 +22,14 @@ export class Book {
     }
 
     static async getCollection(): Promise<Collection<Book>> {
+   
+        // Récupération de la collection
         const collection: Collection<Book> = MongoDB.db.collection('Book');
         return collection;
     }
    
     static async getImageUrl(bookId: string): Promise<string> {
-        const clt = await this.getCollection();
+        const clt = await Book.getCollection();
         const book = await clt.findOne({ _id: new ObjectId(bookId) });
         return book.imageUrl;
     }
