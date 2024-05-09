@@ -16,18 +16,18 @@ export class Book {
     averageRating: number;
 
     constructor(data: Partial<Book>) {
+
+        data.year = parseInt(data.year as any);
         Object.assign(this, data);
     }
 
     static async getCollection(): Promise<Collection<Book>> {
-   
-        // Récupération de la collection
         const collection: Collection<Book> = MongoDB.db.collection('Book');
         return collection;
     }
    
     static async getImageUrl(bookId: string): Promise<string> {
-        const clt = await Book.getCollection();
+        const clt = await this.getCollection();
         const book = await clt.findOne({ _id: new ObjectId(bookId) });
         return book.imageUrl;
     }
